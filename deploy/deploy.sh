@@ -3,7 +3,8 @@ set -e
 
 IMAGE="$1"
 NEW_SHA="$2"
-STATE_FILE="$HOME/.devops-evaluation-last-good-sha"
+STATE_DIR="${GITHUB_WORKSPACE:+$(dirname "$GITHUB_WORKSPACE")}"
+STATE_FILE="${STATE_DIR:-.}/.devops-evaluation-last-good-sha"
 CONTAINER_NAME="devops-evaluation-app"
 REDIS_CONTAINER="devops-evaluation-redis"
 NETWORK="devops-evaluation-deploy"
