@@ -3,7 +3,7 @@ set -e
 
 IMAGE="$1"
 NEW_SHA="$2"
-STATE_FILE="deploy/last_good_sha"
+STATE_FILE="$HOME/.devops-evaluation-last-good-sha"
 CONTAINER_NAME="devops-evaluation-app"
 REDIS_CONTAINER="devops-evaluation-redis"
 NETWORK="devops-evaluation-deploy"
