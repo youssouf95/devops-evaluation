@@ -5,6 +5,8 @@ IMAGE="$1"
 NEW_SHA="$2"
 STATE_FILE="deploy/last_good_sha"
 CONTAINER_NAME="devops-evaluation-app"
+REDIS_CONTAINER="devops-evaluation-redis"
+NETWORK="devops-evaluation-deploy"
 APP_PORT=5000
 
 if [ -f "$STATE_FILE" ]; then
@@ -13,14 +15,27 @@ else
     PREVIOUS_SHA=""
 fi
 
-echo "Deploiement de $IMAGE:$NEW_SHA"
-docker pull "$IMAGE:$NEW_SHA"
+docker network inspect "$NETWORK" > /dev/null 2>&1 || docker network create "$NETWORK"
 
-docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-docker run -d --name "$CONTAINER_NAME" \
-    -p "$APP_PORT:5000" \
-    -e COMMIT_SHA="$NEW_SHA" \
-    "$IMAGE:$NEW_SHA"
+if ! docker ps --format '{{.Names}}' | grep -q "^${REDIS_CONTAINER}$"; then
+    docker rm -f "$REDIS_CONTAINER" 2>/dev/null || true
+    docker run -d --name "$REDIS_CONTAINER" --network "$NETWORK" redis:7-alpine
+fi
+
+deploy_container() {
+    local sha="$1"
+    docker pull "$IMAGE:$sha"
+    docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+    docker run -d --name "$CONTAINER_NAME" \
+        --network "$NETWORK" \
+        -p "$APP_PORT:5000" \
+        -e REDIS_HOST="$REDIS_CONTAINER" \
+        -e COMMIT_SHA="$sha" \
+        "$IMAGE:$sha"
+}
+
+echo "Deploiement de $IMAGE:$NEW_SHA"
+deploy_container "$NEW_SHA"
 
 READY=0
 for i in 1 2 3; do
@@ -37,12 +52,7 @@ if [ "$READY" -ne 1 ]; then
 
     if [ -n "$PREVIOUS_SHA" ]; then
         echo "ROLLBACK vers $IMAGE:$PREVIOUS_SHA"
-        docker pull "$IMAGE:$PREVIOUS_SHA"
-        docker rm -f "$CONTAINER_NAME"
-        docker run -d --name "$CONTAINER_NAME" \
-            -p "$APP_PORT:5000" \
-            -e COMMIT_SHA="$PREVIOUS_SHA" \
-            "$IMAGE:$PREVIOUS_SHA"
+        deploy_container "$PREVIOUS_SHA"
     else
         echo "Aucun deploiement precedent connu, pas de rollback possible"
     fi
