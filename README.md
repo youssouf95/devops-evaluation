@@ -50,8 +50,9 @@ reel de l'application (code de retour HTTP, incrementation persistee dans Redis)
   `lint` (flake8 + yamllint), `test` (matrice Python 3.11/3.12, service Redis reel,
   cache pip, rapports de tests publies en artefacts), `build` (verifie que l'image
   Docker se construit), `ci-ok` (check final requis pour merger sur `main`).
-- `.github/workflows/cd.yml` : sur push vers `main` (apres CI verte) ou declenchement
-  manuel (`workflow_dispatch`, input `environment=production`). Construit l'image,
+- `.github/workflows/cd.yml` : declenchee automatiquement des que le workflow CI
+  se termine avec succes sur `main` (`workflow_run`), ou manuellement
+  (`workflow_dispatch`, input `environment=production`). Construit l'image,
   la pousse sur GitHub Container Registry avec trois tags (`latest`, SHA court,
   version semver lue dans `VERSION`), puis la deploie sur la machine cible via un
   runner self-hosted.
@@ -60,14 +61,17 @@ reel de l'application (code de retour HTTP, incrementation persistee dans Redis)
 
 ## Deploiement
 
-`deploy/deploy.sh` recupere la nouvelle image, demarre le conteneur, verifie
-`/health` avec 3 tentatives espacees de 5 secondes. Si le healthcheck echoue,
-le script revient automatiquement sur le dernier SHA deploye avec succes
-(`deploy/last_good_sha`) et le job `deploy` echoue.
+`deploy/deploy.sh` recupere la nouvelle image, demarre le conteneur (avec son
+propre Redis sur un reseau Docker dedie), verifie `/health` avec 3 tentatives
+espacees de 5 secondes. Si le healthcheck echoue, le script revient
+automatiquement sur le dernier SHA deploye avec succes (SHA lu et ecrit dans
+un fichier d'etat situe sur la machine du runner, en dehors du repertoire de
+checkout puisque celui-ci est reinitialise a chaque execution) et le job
+`deploy` echoue.
 
 Le job `deploy` tourne sur un runner GitHub Actions self-hosted installe sur
-la machine cible (`runs-on: self-hosted`), uniquement sur push vers `main` ou
-via `workflow_dispatch`.
+la machine cible (`runs-on: self-hosted`), uniquement apres que le job
+`build-and-push` a reussi.
 
 ## Observabilite
 

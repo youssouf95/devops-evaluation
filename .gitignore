@@ -22,6 +22,3 @@ htmlcov/
 *.egg-info/
 app/junit.xml
 app/coverage.xml
-
-# Deploiement local
-deploy/last_good_sha
