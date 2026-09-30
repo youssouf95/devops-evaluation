@@ -73,4 +73,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deployer et verifier
-        run: bash deploy/deploy.sh ghcr.io/${{ github.repository }} ${{ needs.build-and-push.outputs.short_sha }}
+        env:
+          SHORT_SHA: ${{ needs.build-and-push.outputs.short_sha }}
+        run: |
+          & "C:\Program Files\Git\bin\bash.exe" deploy/deploy.sh "ghcr.io/${{ github.repository }}" "$env:SHORT_SHA"
