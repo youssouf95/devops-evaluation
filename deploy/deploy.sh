@@ -3,12 +3,13 @@ set -e
 
 IMAGE="$1"
 NEW_SHA="$2"
-STATE_DIR="${GITHUB_WORKSPACE:+$(dirname "$GITHUB_WORKSPACE")}"
-STATE_FILE="${STATE_DIR:-.}/.devops-evaluation-last-good-sha"
+STATE_FILE="/d/deploy-state/devops-evaluation-last-good-sha"
 CONTAINER_NAME="devops-evaluation-app"
 REDIS_CONTAINER="devops-evaluation-redis"
 NETWORK="devops-evaluation-deploy"
 APP_PORT=5000
+
+mkdir -p "$(dirname "$STATE_FILE")"
 
 if [ -f "$STATE_FILE" ]; then
     PREVIOUS_SHA=$(cat "$STATE_FILE")
